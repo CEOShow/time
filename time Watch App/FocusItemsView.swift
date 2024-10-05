@@ -6,50 +6,80 @@
 //
 
 import SwiftUI
-
-struct FocusItem: Identifiable {
-    let id = UUID()
-    let name: String
-}
+import Foundation
 
 struct FocusItemsView: View {
-    @State private var focusItems = [
-        FocusItem(name: "讀書"),
-        FocusItem(name: "做家事"),
-        FocusItem(name: "玩電動"),
-        FocusItem(name: "唸英文")
-    ]
-    @Environment(\.presentationMode) var presentationMode
+    let focusItems: [FocusItem]
+    @State private var selectedItems: [UUID: Int] = [:]
+    let maxSelections: Int
+    
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         VStack {
-            Text("請選擇專注項目")
-                .font(.headline)
-                .padding()
+            Text("請選擇\(maxSelections)個專注項目")
+                .font(.subheadline)
+                .padding(.top, 5)
             
             List {
                 ForEach(focusItems) { item in
-                    Text(item.name)
+                    Button(action: {
+                        toggleSelection(for: item)
+                    }) {
+                        HStack {
+                            Text(item.name)
+                            Spacer()
+                            if let order = selectedItems[item.id] {
+                                Text("\(order)")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 20, height: 20)
+                                    .background(Color.blue)
+                                    .clipShape(Circle())
+                            }
+                        }
+                    }
+                    .foregroundColor(.primary)
                 }
                 
                 Button(action: {
-                    presentationMode.wrappedValue.dismiss()
+                    dismiss()
                 }) {
                     Text("完成")
-                        .font(.headline)
+                        .font(.subheadline)
                         .foregroundColor(.white)
-                        .frame(height: 50)
+                        .frame(height: 35)
                         .frame(maxWidth: .infinity)
-                        .background(Color.green)
-                        .cornerRadius(10)
+                        .background(selectedItems.count == maxSelections ? Color.green : Color.gray)
+                        .cornerRadius(17.5)
                 }
+                .disabled(selectedItems.count != maxSelections)  // 只有在選擇的數量等於要求的數量時才能點擊
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
             }
         }
     }
-}
-
-#Preview {
-    FocusItemsView()
+    
+    private func toggleSelection(for item: FocusItem) {
+        if let _ = selectedItems[item.id] {
+            selectedItems.removeValue(forKey: item.id)
+            reorderSelections()
+        } else {
+            if selectedItems.count < maxSelections {
+                selectedItems[item.id] = selectedItems.count + 1
+            }
+        }
+    }
+    
+    private func reorderSelections() {
+        var order = 1
+        var newSelections: [UUID: Int] = [:]
+        
+        for id in selectedItems.keys.sorted(by: { selectedItems[$0]! < selectedItems[$1]! }) {
+            newSelections[id] = order
+            order += 1
+        }
+        
+        selectedItems = newSelections
+    }
 }
