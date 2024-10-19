@@ -7,6 +7,35 @@
 
 import SwiftUI
 
+struct CircleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 18))
+            .frame(width: 30, height: 30)
+            .foregroundColor(.white)
+            .background(configuration.isPressed ? Color.blue.opacity(0.8) : Color.blue)
+            .clipShape(Circle())
+    }
+}
+
+struct SideButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(height: 35)
+            .frame(maxWidth: .infinity)
+            .background(configuration.isPressed ? Color.green.opacity(0.8) : Color.green)
+            .cornerRadius(17.5)
+            .padding(.horizontal, 5)
+    }
+}
+
+struct FocusItem: Identifiable {
+    let id = UUID()
+    let name: String
+}
+
 struct ContentView: View {
     @State private var minutes: Int = 25
     @State private var showingFocusItems = false
@@ -128,39 +157,17 @@ struct ContentView: View {
         }
         .fullScreenCover(isPresented: $showingTimer) {
             TimerView(
-                selectedItem: selectedItems.first ?? "",  // 防止越界
+                selectedItems: selectedItems,
                 minutes: minutes
             )
         }
+        .onChange(of: numberOfFocusItems) { newValue in
+            if selectedItems.count > newValue {
+                selectedItems = Array(selectedItems.prefix(newValue))
+            }
+        }
     }
 }
-
-struct CircleButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 18))
-            .frame(width: 30, height: 30)
-            .foregroundColor(.white)
-            .background(configuration.isPressed ? Color.blue.opacity(0.8) : Color.blue)
-            .clipShape(Circle())
-    }
-}
-
-struct SideButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundColor(.white)
-            .frame(height: 35)
-            .frame(maxWidth: .infinity)
-            .background(configuration.isPressed ? Color.green.opacity(0.8) : Color.green)
-            .cornerRadius(17.5)
-            .padding(.horizontal, 5)
-    }
-}
-
-
-
 
 #Preview {
     ContentView()
