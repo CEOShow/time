@@ -42,6 +42,7 @@ struct ContentView: View {
     @State private var numberOfFocusItems: Int = 1
     @State private var showingTimer = false
     @State private var selectedItems: [String] = []
+    @State private var showingSettings = false  // 新增這行
     
     private let focusItems = [
         FocusItem(name: "讀書"),
@@ -54,12 +55,33 @@ struct ContentView: View {
         FocusItem(name: "冥想"),
         FocusItem(name: "寫作")
     ]
-
+    
     var body: some View {
         VStack(spacing: 8) {
-            Text("番茄鐘")
-                .font(.system(size: 25, weight: .bold))
-                .padding(.top, 5)
+            // 新增標題列
+            HStack {
+                Button(action: {
+                    showingSettings = true
+                }) {
+                    Image(systemName: "gear")
+                        .font(.system(size: 20))
+                        .foregroundColor(.blue)
+                }
+                
+                Spacer()
+                
+                Text("番茄鐘")
+                    .font(.system(size: 25, weight: .bold))
+                
+                Spacer()
+                
+                // 為了保持對稱，加入一個隱形的按鈕
+                Image(systemName: "gear")
+                    .font(.system(size: 20))
+                    .foregroundColor(.clear)
+            }
+            .padding(.horizontal)
+            .padding(.top, 5)
 
             Spacer()
 
@@ -147,6 +169,9 @@ struct ContentView: View {
                 .buttonStyle(SideButtonStyle())
             }
             .padding(.bottom, 5)
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
         }
         .sheet(isPresented: $showingFocusItems) {
             FocusItemsView(
