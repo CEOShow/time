@@ -41,22 +41,6 @@ struct SettingsView: View {
     }
 }
 
-// 這是預留的視圖，之後再實作細節
-struct FocusItemSettingsView: View {
-    var body: some View {
-        Text("專注項目設定")
-            .navigationTitle("專注項目")
-    }
-}
-
-// 這是預留的視圖，之後再實作細節
-struct TimeSettingsView: View {
-    var body: some View {
-        Text("時間設定")
-            .navigationTitle("預設時間")
-    }
-}
-
 #Preview {
     SettingsView()
 }

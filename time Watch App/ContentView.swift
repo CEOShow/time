@@ -18,6 +18,17 @@ struct CircleButtonStyle: ButtonStyle {
     }
 }
 
+struct BackButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 20))
+            .foregroundColor(.white)
+            .frame(width: 35, height: 35)
+            .background(Color.black.opacity(0.3))
+            .clipShape(Circle())
+    }
+}
+
 struct SideButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -37,12 +48,19 @@ struct FocusItem: Identifiable {
 }
 
 struct ContentView: View {
-    @State private var minutes: Int = 25
+    @AppStorage("defaultMinutes") private var defaultMinutes = 25
+    @State private var minutes: Int
     @State private var showingFocusItems = false
     @State private var numberOfFocusItems: Int = 1
     @State private var showingTimer = false
     @State private var selectedItems: [String] = []
-    @State private var showingSettings = false  // 新增這行
+    @State private var showingSettings = false
+    
+    // 在初始化時讀取預設值
+    init() {
+        let savedMinutes = UserDefaults.standard.integer(forKey: "defaultMinutes")
+        _minutes = State(initialValue: savedMinutes > 0 ? savedMinutes : 25)
+    }
     
     private let focusItems = [
         FocusItem(name: "讀書"),
@@ -58,15 +76,15 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 8) {
-            // 新增標題列
+            // 標題列
             HStack {
                 Button(action: {
                     showingSettings = true
                 }) {
                     Image(systemName: "gear")
                         .font(.system(size: 20))
-                        .foregroundColor(.blue)
                 }
+                .buttonStyle(BackButtonStyle())
                 
                 Spacer()
                 
@@ -76,8 +94,8 @@ struct ContentView: View {
                 Spacer()
                 
                 // 為了保持對稱，加入一個隱形的按鈕
-                Image(systemName: "gear")
-                    .font(.system(size: 20))
+                Circle()
+                    .frame(width: 35, height: 35)
                     .foregroundColor(.clear)
             }
             .padding(.horizontal)
