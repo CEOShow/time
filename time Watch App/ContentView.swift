@@ -49,9 +49,10 @@ struct FocusItem: Identifiable {
 
 struct ContentView: View {
     @AppStorage("defaultMinutes") private var defaultMinutes = 25
+    @AppStorage("defaultFocusItems") private var defaultFocusItems = 1
     @State private var minutes: Int
+    @State private var numberOfFocusItems: Int
     @State private var showingFocusItems = false
-    @State private var numberOfFocusItems: Int = 1
     @State private var showingTimer = false
     @State private var selectedItems: [String] = []
     @State private var showingSettings = false
@@ -59,7 +60,9 @@ struct ContentView: View {
     // 在初始化時讀取預設值
     init() {
         let savedMinutes = UserDefaults.standard.integer(forKey: "defaultMinutes")
+        let savedFocusItems = UserDefaults.standard.integer(forKey: "defaultFocusItems")
         _minutes = State(initialValue: savedMinutes > 0 ? savedMinutes : 25)
+        _numberOfFocusItems = State(initialValue: savedFocusItems > 0 ? savedFocusItems : 1)
     }
     
     private let focusItems = [
@@ -107,6 +110,7 @@ struct ContentView: View {
             VStack(spacing: 2) {
                 Text("專注時間")
                     .font(.subheadline)
+                    .foregroundColor(.gray)
 
                 HStack(spacing: 15) {
                     Button(action: {
@@ -114,7 +118,7 @@ struct ContentView: View {
                             minutes -= 1
                         }
                     }) {
-                        Text("-")
+                        Image(systemName: "minus")
                     }
                     .buttonStyle(CircleButtonStyle())
 
@@ -127,7 +131,7 @@ struct ContentView: View {
                             minutes += 1
                         }
                     }) {
-                        Text("+")
+                        Image(systemName: "plus")
                     }
                     .buttonStyle(CircleButtonStyle())
                 }
@@ -138,6 +142,7 @@ struct ContentView: View {
             VStack(spacing: 2) {
                 Text("專注項目數量")
                     .font(.subheadline)
+                    .foregroundColor(.gray)
 
                 HStack(spacing: 15) {
                     Button(action: {
@@ -145,7 +150,7 @@ struct ContentView: View {
                             numberOfFocusItems -= 1
                         }
                     }) {
-                        Text("-")
+                        Image(systemName: "minus")
                     }
                     .buttonStyle(CircleButtonStyle())
 
@@ -158,7 +163,7 @@ struct ContentView: View {
                             numberOfFocusItems += 1
                         }
                     }) {
-                        Text("+")
+                        Image(systemName: "plus")
                     }
                     .buttonStyle(CircleButtonStyle())
                 }
