@@ -6,47 +6,96 @@
 //
 
 import SwiftUI
-import Foundation
 
 struct FocusItemsView: View {
-    let focusItems: [FocusItem]
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("focusItems") private var focusItemsData: Data = Data()
+    @State private var loadedFocusItems: [FocusItem] = []
     let maxSelections: Int
     @Binding var selectedItems: [String]
-
+    
     var body: some View {
-        List(focusItems) { item in
-            Button(action: {
-                toggleSelection(item: item)
-            }) {
-                HStack {
-                    Text(item.name)
-                    Spacer()
-                    if let index = selectedItems.firstIndex(of: item.name) {
-                        Text("\(index + 1)")
-                            .foregroundColor(.blue)
-                            .font(.system(size: 16, weight: .bold))
-                            .frame(width: 24, height: 24)
-                            .background(Circle().fill(Color.blue.opacity(0.2)))
+        NavigationStack {
+            VStack {
+                Text("選擇 \(maxSelections) 個專注項目")
+                    .font(.headline)
+                    .padding(.top)
+                
+                ScrollView {
+                    LazyVGrid(
+                        columns: Array(repeating: GridItem(.flexible()), count: 2),
+                        spacing: 10
+                    ) {
+                        ForEach(loadedFocusItems) { item in
+                            SelectableButton(
+                                text: item.name,
+                                isSelected: selectedItems.contains(item.name),
+                                action: {
+                                    if selectedItems.contains(item.name) {
+                                        selectedItems.removeAll { $0 == item.name }
+                                    } else {
+                                        if selectedItems.count < maxSelections {
+                                            selectedItems.append(item.name)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    .padding()
+                }
+                
+                Button("確定") {
+                    dismiss()
+                }
+                .buttonStyle(SideButtonStyle())
+                .padding()
+            }
+            .navigationTitle("專注項目")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") {
+                        dismiss()
                     }
                 }
             }
         }
-        .onChange(of: maxSelections) { newValue in
-            updateSelectedItems(newMaxSelections: newValue)
+        .onAppear {
+            loadItems()
         }
     }
     
-    private func toggleSelection(item: FocusItem) {
-        if let index = selectedItems.firstIndex(of: item.name) {
-            selectedItems.remove(at: index)
-        } else if selectedItems.count < maxSelections {
-            selectedItems.append(item.name)
+    private func loadItems() {
+        if let savedItems = try? JSONDecoder().decode([FocusItem].self, from: focusItemsData) {
+            loadedFocusItems = savedItems
         }
     }
+}
+
+struct SelectableButton: View {
+    let text: String
+    let isSelected: Bool
+    let action: () -> Void
     
-    private func updateSelectedItems(newMaxSelections: Int) {
-        if selectedItems.count > newMaxSelections {
-            selectedItems = Array(selectedItems.prefix(newMaxSelections))
+    var body: some View {
+        Button(action: action) {
+            Text(text)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(isSelected ? .white : .primary)
+                .frame(height: 44)
+                .frame(maxWidth: .infinity)
+                .background(isSelected ? Color.blue : Color.gray.opacity(0.1))
+                .cornerRadius(8)
         }
+    }
+}
+
+struct FocusItemsView_Previews: PreviewProvider {
+    static var previews: some View {
+        FocusItemsView(
+            maxSelections: 2,
+            selectedItems: .constant(["讀書"])
+        )
     }
 }

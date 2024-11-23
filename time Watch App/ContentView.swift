@@ -42,7 +42,7 @@ struct SideButtonStyle: ButtonStyle {
     }
 }
 
-struct FocusItem: Identifiable {
+struct FocusItem: Identifiable, Codable {
     let id = UUID()
     let name: String
 }
@@ -50,14 +50,15 @@ struct FocusItem: Identifiable {
 struct ContentView: View {
     @AppStorage("defaultMinutes") private var defaultMinutes = 25
     @AppStorage("defaultFocusItems") private var defaultFocusItems = 1
+    @AppStorage("focusItems") private var focusItemsData: Data = Data()
     @State private var minutes: Int
     @State private var numberOfFocusItems: Int
     @State private var showingFocusItems = false
     @State private var showingTimer = false
     @State private var selectedItems: [String] = []
     @State private var showingSettings = false
+    @State private var focusItems: [FocusItem] = []
     
-    // 在初始化時讀取預設值
     init() {
         let savedMinutes = UserDefaults.standard.integer(forKey: "defaultMinutes")
         let savedFocusItems = UserDefaults.standard.integer(forKey: "defaultFocusItems")
@@ -65,21 +66,29 @@ struct ContentView: View {
         _numberOfFocusItems = State(initialValue: savedFocusItems > 0 ? savedFocusItems : 1)
     }
     
-    private let focusItems = [
-        FocusItem(name: "讀書"),
-        FocusItem(name: "做家事"),
-        FocusItem(name: "玩電動"),
-        FocusItem(name: "唸英文"),
-        FocusItem(name: "寫程式"),
-        FocusItem(name: "畫畫"),
-        FocusItem(name: "運動"),
-        FocusItem(name: "冥想"),
-        FocusItem(name: "寫作")
-    ]
+    private func loadFocusItems() {
+        if let savedItems = try? JSONDecoder().decode([FocusItem].self, from: focusItemsData) {
+            focusItems = savedItems
+        } else {
+            focusItems = [
+                FocusItem(name: "讀書"),
+                FocusItem(name: "做家事"),
+                FocusItem(name: "玩電動"),
+                FocusItem(name: "唸英文"),
+                FocusItem(name: "寫程式"),
+                FocusItem(name: "畫畫"),
+                FocusItem(name: "運動"),
+                FocusItem(name: "冥想"),
+                FocusItem(name: "寫作")
+            ]
+            if let encoded = try? JSONEncoder().encode(focusItems) {
+                focusItemsData = encoded
+            }
+        }
+    }
     
     var body: some View {
         VStack(spacing: 8) {
-            // 標題列
             HStack {
                 Button(action: {
                     showingSettings = true
@@ -96,7 +105,6 @@ struct ContentView: View {
                 
                 Spacer()
                 
-                // 為了保持對稱，加入一個隱形的按鈕
                 Circle()
                     .frame(width: 35, height: 35)
                     .foregroundColor(.clear)
@@ -106,7 +114,6 @@ struct ContentView: View {
 
             Spacer()
 
-            // 時間選擇器
             VStack(spacing: 2) {
                 Text("專注時間")
                     .font(.subheadline)
@@ -138,7 +145,6 @@ struct ContentView: View {
             }
             .padding(.vertical, 3)
 
-            // 專注項目數量選擇器
             VStack(spacing: 2) {
                 Text("專注項目數量")
                     .font(.subheadline)
@@ -172,7 +178,6 @@ struct ContentView: View {
 
             Spacer()
 
-            // 底部按鈕並排
             HStack(spacing: 8) {
                 Button(action: {
                     if !selectedItems.isEmpty {
@@ -198,7 +203,6 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingFocusItems) {
             FocusItemsView(
-                focusItems: focusItems,
                 maxSelections: numberOfFocusItems,
                 selectedItems: $selectedItems
             )
@@ -213,6 +217,9 @@ struct ContentView: View {
             if selectedItems.count > newValue {
                 selectedItems = Array(selectedItems.prefix(newValue))
             }
+        }
+        .onAppear {
+            loadFocusItems()
         }
     }
 }

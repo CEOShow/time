@@ -9,21 +9,21 @@ import SwiftUI
 
 struct FocusItemSettingsView: View {
     @AppStorage("focusItems") private var focusItemsData: Data = Data()
-    @State private var items: [String] = []
+    @State private var items: [FocusItem] = []
     @State private var isEditing = false
     @State private var showingAddItem = false
     @State private var newItemName = ""
     
     var body: some View {
         List {
-            ForEach(items, id: \.self) { item in
+            ForEach(items) { item in
                 HStack {
-                    Text(item)
+                    Text(item.name)
                         .padding(.vertical, 2)
                     Spacer()
                     if isEditing {
                         Button(action: {
-                            if let index = items.firstIndex(of: item) {
+                            if let index = items.firstIndex(where: { $0.id == item.id }) {
                                 items.remove(at: index)
                                 saveItems()
                             }
@@ -59,14 +59,30 @@ struct FocusItemSettingsView: View {
                 }
             }
         }
-        .alert("新增專注項目", isPresented: $showingAddItem) {
-            TextField("項目名稱", text: $newItemName)
-            Button("取消", role: .cancel) {}
-            Button("新增") {
-                if !newItemName.isEmpty {
-                    items.append(newItemName)
-                    saveItems()
-                    newItemName = ""
+        .sheet(isPresented: $showingAddItem) {
+            NavigationStack {
+                Form {
+                    TextField("項目名稱", text: $newItemName)
+                }
+                .navigationTitle("新增專注項目")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("取消") {
+                            showingAddItem = false
+                            newItemName = ""
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("新增") {
+                            if !newItemName.isEmpty {
+                                let newItem = FocusItem(name: newItemName)
+                                items.append(newItem)
+                                saveItems()
+                                newItemName = ""
+                                showingAddItem = false
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -76,20 +92,19 @@ struct FocusItemSettingsView: View {
     }
     
     private func loadItems() {
-        if let savedItems = try? JSONDecoder().decode([String].self, from: focusItemsData) {
+        if let savedItems = try? JSONDecoder().decode([FocusItem].self, from: focusItemsData) {
             items = savedItems
         } else {
-            // 預設項目
             items = [
-                "讀書",
-                "做家事",
-                "玩電動",
-                "唸英文",
-                "寫程式",
-                "畫畫",
-                "運動",
-                "冥想",
-                "寫作"
+                FocusItem(name: "讀書"),
+                FocusItem(name: "做家事"),
+                FocusItem(name: "玩電動"),
+                FocusItem(name: "唸英文"),
+                FocusItem(name: "寫程式"),
+                FocusItem(name: "畫畫"),
+                FocusItem(name: "運動"),
+                FocusItem(name: "冥想"),
+                FocusItem(name: "寫作")
             ]
             saveItems()
         }
