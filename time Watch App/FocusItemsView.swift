@@ -10,7 +10,7 @@ import SwiftUI
 struct FocusItemsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("focusItems") private var focusItemsData: Data = Data()
-    @State private var loadedFocusItems: [FocusItem] = []
+    @State private var loadedFocusItems: [FocusItemModel] = []
     let maxSelections: Int
     @Binding var selectedItems: [String]
     
@@ -20,36 +20,25 @@ struct FocusItemsView: View {
                 Text("選擇 \(maxSelections) 個專注項目")
                     .font(.headline)
                     .padding(.top)
-                
-                ScrollView {
-                    LazyVGrid(
-                        columns: Array(repeating: GridItem(.flexible()), count: 2),
-                        spacing: 10
-                    ) {
-                        ForEach(loadedFocusItems) { item in
-                            SelectableButton(
-                                text: item.name,
-                                isSelected: selectedItems.contains(item.name),
-                                action: {
-                                    if selectedItems.contains(item.name) {
-                                        selectedItems.removeAll { $0 == item.name }
-                                    } else {
-                                        if selectedItems.count < maxSelections {
-                                            selectedItems.append(item.name)
-                                        }
-                                    }
-                                }
-                            )
-                        }
+                List {
+                    ForEach(loadedFocusItems, id: \.id) { item in
+                        SelectableListRow(
+                            text: item.name,
+                            isSelected: selectedItems.contains(item.name),
+                            action: {
+                                toggleSelection(for: item.name)
+                            }
+                        )
                     }
+                    
+                    Button("確定") {
+                        dismiss()
+                    }
+                    .buttonStyle(SideButtonStyle())
                     .padding()
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
-                
-                Button("確定") {
-                    dismiss()
-                }
-                .buttonStyle(SideButtonStyle())
-                .padding()
+                .listStyle(PlainListStyle()) // 使用 PlainListStyle 以便於 watchOS 兼容
             }
             .navigationTitle("專注項目")
             .navigationBarTitleDisplayMode(.inline)
@@ -67,28 +56,51 @@ struct FocusItemsView: View {
     }
     
     private func loadItems() {
-        if let savedItems = try? JSONDecoder().decode([FocusItem].self, from: focusItemsData) {
+        if let savedItems = try? JSONDecoder().decode([FocusItemModel].self, from: focusItemsData) {
             loadedFocusItems = savedItems
+        }
+    }
+    
+    private func toggleSelection(for itemName: String) {
+        if selectedItems.contains(itemName) {
+            selectedItems.removeAll { $0 == itemName }
+        } else if selectedItems.count < maxSelections {
+            selectedItems.append(itemName)
+        } else {
+            // 如果已經達到最大選擇數量,則取消第一個選擇的項目
+            selectedItems.removeFirst()
+            selectedItems.append(itemName)
         }
     }
 }
 
-struct SelectableButton: View {
+struct SelectableListRow: View {
     let text: String
     let isSelected: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            Text(text)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(isSelected ? .white : .primary)
-                .frame(height: 44)
-                .frame(maxWidth: .infinity)
-                .background(isSelected ? Color.blue : Color.gray.opacity(0.1))
-                .cornerRadius(8)
+            HStack {
+                Text(text)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.blue)
+                }
+            }
+            .padding()
+            .background(Color.clear)
+            .cornerRadius(8)
         }
     }
+}
+
+struct FocusItemModel: Identifiable, Codable {
+    let id: UUID
+    let name: String
 }
 
 struct FocusItemsView_Previews: PreviewProvider {

@@ -58,14 +58,14 @@ struct ContentView: View {
     @State private var selectedItems: [String] = []
     @State private var showingSettings = false
     @State private var focusItems: [FocusItem] = []
-    
+
     init() {
         let savedMinutes = UserDefaults.standard.integer(forKey: "defaultMinutes")
         let savedFocusItems = UserDefaults.standard.integer(forKey: "defaultFocusItems")
         _minutes = State(initialValue: savedMinutes > 0 ? savedMinutes : 25)
         _numberOfFocusItems = State(initialValue: savedFocusItems > 0 ? savedFocusItems : 1)
     }
-    
+
     private func loadFocusItems() {
         if let savedItems = try? JSONDecoder().decode([FocusItem].self, from: focusItemsData) {
             focusItems = savedItems
@@ -86,9 +86,11 @@ struct ContentView: View {
             }
         }
     }
-    
+
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 0) {
+            Spacer()
+
             HStack {
                 Button(action: {
                     showingSettings = true
@@ -97,20 +99,19 @@ struct ContentView: View {
                         .font(.system(size: 20))
                 }
                 .buttonStyle(BackButtonStyle())
-                
+
                 Spacer()
-                
+
                 Text("番茄鐘")
                     .font(.system(size: 25, weight: .bold))
-                
+
                 Spacer()
-                
+
                 Circle()
                     .frame(width: 35, height: 35)
                     .foregroundColor(.clear)
             }
             .padding(.horizontal)
-            .padding(.top, 5)
 
             Spacer()
 
@@ -118,7 +119,6 @@ struct ContentView: View {
                 Text("專注時間")
                     .font(.subheadline)
                     .foregroundColor(.gray)
-
                 HStack(spacing: 15) {
                     Button(action: {
                         if minutes > 1 {
@@ -128,11 +128,9 @@ struct ContentView: View {
                         Image(systemName: "minus")
                     }
                     .buttonStyle(CircleButtonStyle())
-
                     Text("\(minutes)")
                         .font(.system(size: 25, weight: .bold))
                         .frame(width: 35)
-
                     Button(action: {
                         if minutes < 60 {
                             minutes += 1
@@ -149,7 +147,6 @@ struct ContentView: View {
                 Text("專注項目數量")
                     .font(.subheadline)
                     .foregroundColor(.gray)
-
                 HStack(spacing: 15) {
                     Button(action: {
                         if numberOfFocusItems > 1 {
@@ -159,11 +156,9 @@ struct ContentView: View {
                         Image(systemName: "minus")
                     }
                     .buttonStyle(CircleButtonStyle())
-
                     Text("\(numberOfFocusItems)")
                         .font(.system(size: 25, weight: .bold))
                         .frame(width: 35)
-
                     Button(action: {
                         if numberOfFocusItems < 9 {
                             numberOfFocusItems += 1
@@ -185,19 +180,24 @@ struct ContentView: View {
                     }
                 }) {
                     Text("開始")
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(SideButtonStyle())
-                .disabled(selectedItems.isEmpty)
+                .frame(minHeight: 40)
 
                 Button(action: {
                     showingFocusItems = true
                 }) {
                     Text("項目")
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(SideButtonStyle())
+                .frame(minHeight: 40)
             }
-            .padding(.bottom, 5)
+            .padding(.horizontal, 8)
+            .padding(.bottom, 8)
         }
+        .padding(.horizontal, 10)
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
