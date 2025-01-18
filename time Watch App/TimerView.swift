@@ -13,7 +13,6 @@ struct TimerView: View {
     @State private var remainingTime: Int
     @State private var timer: Timer?
     @State private var currentItemIndex = 0
-    @State private var isPaused = false
     @Environment(\.presentationMode) var presentationMode
     
     init(selectedItems: [String], minutes: Int) {
@@ -54,47 +53,18 @@ struct TimerView: View {
             
             Spacer()
             
-            HStack(spacing: 30) { // 增加按鈕之間的間距
-                if !isPaused {
-                    Button(action: {
-                        pauseTimer()
-                    }) {
-                        Text("暫停")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 90, height: 40) // 減少按鈕寬度
-                            .background(Color.orange)
-                            .cornerRadius(20)
-                    }
-                } else {
-                    Button(action: {
-                        stopTimer()
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Text("停止")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 90, height: 40) // 減少按鈕寬度
-                            .background(Color.red)
-                            .cornerRadius(20)
-                    }
-                    
-                    Button(action: {
-                        resumeTimer()
-                    }) {
-                        Text("繼續")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: 90, height: 40) // 減少按鈕寬度
-                            .background(Color.green)
-                            .cornerRadius(20)
-                    }
-                }
+            Button(action: {
+                stopTimer()
+                presentationMode.wrappedValue.dismiss()
+            }) {
+                Text("停止")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 90, height: 40)
+                    .background(Color.red)
+                    .cornerRadius(20)
             }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.horizontal, 20) // 增加左右間距，避免按鈕過於靠近邊界
             .padding(.bottom, 20)
-
         }
         .onAppear {
             startTimer()
@@ -109,16 +79,6 @@ struct TimerView: View {
                 nextItem()
             }
         }
-    }
-    
-    private func pauseTimer() {
-        timer?.invalidate()
-        isPaused = true
-    }
-    
-    private func resumeTimer() {
-        startTimer()
-        isPaused = false
     }
     
     private func stopTimer() {

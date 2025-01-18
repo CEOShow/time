@@ -9,10 +9,11 @@ import SwiftUI
 
 struct FocusItemsView: View {
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("focusItems") private var focusItemsData: Data = Data()
-    @State private var loadedFocusItems: [FocusItemModel] = []
+    @State private var loadedFocusItems: [TimerItem] = []
     let maxSelections: Int
     @Binding var selectedItems: [String]
+    
+    private let timerManager = TimerManager.shared
     
     var body: some View {
         NavigationStack {
@@ -21,7 +22,7 @@ struct FocusItemsView: View {
                     .font(.headline)
                     .padding(.top)
                 List {
-                    ForEach(loadedFocusItems, id: \.id) { item in
+                    ForEach(loadedFocusItems) { item in
                         SelectableListRow(
                             text: item.name,
                             isSelected: selectedItems.contains(item.name),
@@ -38,7 +39,7 @@ struct FocusItemsView: View {
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .center)
                 }
-                .listStyle(PlainListStyle()) // 使用 PlainListStyle 以便於 watchOS 兼容
+                .listStyle(PlainListStyle())
             }
             .navigationTitle("專注項目")
             .navigationBarTitleDisplayMode(.inline)
@@ -56,9 +57,7 @@ struct FocusItemsView: View {
     }
     
     private func loadItems() {
-        if let savedItems = try? JSONDecoder().decode([FocusItemModel].self, from: focusItemsData) {
-            loadedFocusItems = savedItems
-        }
+        loadedFocusItems = timerManager.getAllItems()
     }
     
     private func toggleSelection(for itemName: String) {
@@ -67,7 +66,6 @@ struct FocusItemsView: View {
         } else if selectedItems.count < maxSelections {
             selectedItems.append(itemName)
         } else {
-            // 如果已經達到最大選擇數量,則取消第一個選擇的項目
             selectedItems.removeFirst()
             selectedItems.append(itemName)
         }
@@ -96,11 +94,6 @@ struct SelectableListRow: View {
             .cornerRadius(8)
         }
     }
-}
-
-struct FocusItemModel: Identifiable, Codable {
-    let id: UUID
-    let name: String
 }
 
 struct FocusItemsView_Previews: PreviewProvider {

@@ -8,45 +8,40 @@
 import SwiftUI
 
 struct FocusItemSettingsView: View {
-    @AppStorage("focusItems") private var focusItemsData: Data = Data()
-    @State private var items: [FocusItem] = []
+    @State private var items: [TimerItem] = []
     @State private var isEditing = false
     @State private var showingAddItem = false
     @State private var newItemName = ""
     
+    // 使用 TimerManager 單例
+    private let timerManager = TimerManager.shared
+
     var body: some View {
         List {
             ForEach(items) { item in
                 HStack {
                     Text(item.name)
-                        .padding(.vertical, 2)
                     Spacer()
                     if isEditing {
                         Button(action: {
-                            if let index = items.firstIndex(where: { $0.id == item.id }) {
-                                items.remove(at: index)
-                                saveItems()
+                            if timerManager.deleteItem(id: item.id) {
+                                loadItems()
                             }
                         }) {
                             Image(systemName: "minus.circle.fill")
                                 .foregroundColor(.red)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
-            
+
             if isEditing {
-                Button(action: {
-                    showingAddItem = true
-                }) {
+                Button(action: { showingAddItem = true }) {
                     HStack {
                         Image(systemName: "plus")
                         Text("新增項目")
                     }
-                    .foregroundColor(.blue)
                 }
-                .buttonStyle(.plain)
             }
         }
         .navigationTitle("專注項目")
@@ -75,44 +70,30 @@ struct FocusItemSettingsView: View {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("新增") {
                             if !newItemName.isEmpty {
-                                let newItem = FocusItem(name: newItemName)
-                                items.append(newItem)
-                                saveItems()
-                                newItemName = ""
-                                showingAddItem = false
+                                if timerManager.addItem(name: newItemName) {
+                                    loadItems()
+                                    newItemName = ""
+                                    showingAddItem = false
+                                } else {
+                                    print("Failed to save new item")
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        .onAppear {
-            loadItems()
-        }
+        .onAppear { loadItems() }
     }
-    
+
     private func loadItems() {
-        if let savedItems = try? JSONDecoder().decode([FocusItem].self, from: focusItemsData) {
-            items = savedItems
-        } else {
-            items = [
-                FocusItem(name: "讀書"),
-                FocusItem(name: "做家事"),
-                FocusItem(name: "玩電動"),
-                FocusItem(name: "唸英文"),
-                FocusItem(name: "寫程式"),
-                FocusItem(name: "畫畫"),
-                FocusItem(name: "運動"),
-                FocusItem(name: "冥想"),
-                FocusItem(name: "寫作")
-            ]
-            saveItems()
-        }
-    }
-    
-    private func saveItems() {
-        if let encoded = try? JSONEncoder().encode(items) {
-            focusItemsData = encoded
+        items = timerManager.getAllItems()
+        if items.isEmpty {
+            let defaultItems = ["讀書", "運動", "冥想"]
+            for item in defaultItems {
+                _ = timerManager.addItem(name: item)
+            }
+            items = timerManager.getAllItems()
         }
     }
 }
