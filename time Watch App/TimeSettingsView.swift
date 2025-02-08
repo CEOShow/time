@@ -23,6 +23,7 @@ struct CircularButtonStyle: ButtonStyle {
 struct TimeSettingsView: View {
     @AppStorage("defaultMinutes") private var defaultMinutes = 25
     @AppStorage("defaultFocusItems") private var defaultFocusItems = 1
+    @AppStorage("breakMinutes") private var breakMinutes = 5
 
     var body: some View {
         ScrollView {
@@ -79,6 +80,36 @@ struct TimeSettingsView: View {
                         Button(action: {
                             if defaultFocusItems < 9 {
                                 defaultFocusItems += 1
+                            }
+                        }) {
+                            Image(systemName: "plus")
+                        }
+                        .buttonStyle(CircularButtonStyle())
+                    }
+                }
+
+                // 休息時間設定
+                VStack(spacing: 2) {
+                    Text("預設休息時間")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    HStack(spacing: 15) {
+                        Button(action: {
+                            if breakMinutes > 1 {
+                                breakMinutes -= 1
+                            }
+                        }) {
+                            Image(systemName: "minus")
+                        }
+                        .buttonStyle(CircularButtonStyle())
+
+                        Text("\(breakMinutes)")
+                            .font(.system(size: 25, weight: .bold))
+                            .frame(width: 35)
+
+                        Button(action: {
+                            if breakMinutes < 30 {
+                                breakMinutes += 1
                             }
                         }) {
                             Image(systemName: "plus")

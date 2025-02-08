@@ -26,6 +26,7 @@ struct FocusItemsView: View {
                         SelectableListRow(
                             text: item.name,
                             isSelected: selectedItems.contains(item.name),
+                            selectionIndex: selectedItems.firstIndex(of: item.name).map { $0 + 1 },
                             action: {
                                 toggleSelection(for: item.name)
                             }
@@ -75,6 +76,7 @@ struct FocusItemsView: View {
 struct SelectableListRow: View {
     let text: String
     let isSelected: Bool
+    let selectionIndex: Int?
     let action: () -> Void
     
     var body: some View {
@@ -84,9 +86,10 @@ struct SelectableListRow: View {
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.primary)
                 Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark")
+                if let index = selectionIndex {
+                    Text("\(index)")
                         .foregroundColor(.blue)
+                        .font(.system(size: 16, weight: .semibold))
                 }
             }
             .padding()
