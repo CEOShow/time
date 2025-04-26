@@ -58,6 +58,9 @@ struct ContentView: View {
     @State private var selectedItems: [String] = []
     @State private var showingSettings = false
     @State private var focusItems: [FocusItem] = []
+    
+    // 用於調試
+    @State private var errorMessage: String = ""
 
     init() {
         let savedMinutes = UserDefaults.standard.integer(forKey: "defaultMinutes")
@@ -171,11 +174,22 @@ struct ContentView: View {
             }
             .padding(.vertical, 3)
 
+            // 顯示錯誤訊息 (調試用)
+            if !errorMessage.isEmpty {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .padding(.top, 5)
+            }
+
             Spacer()
 
             HStack(spacing: 8) {
                 Button(action: {
-                    if !selectedItems.isEmpty {
+                    if selectedItems.isEmpty {
+                        errorMessage = "請選擇至少一個專注項目"
+                    } else {
+                        errorMessage = ""
                         showingTimer = true
                     }
                 }) {

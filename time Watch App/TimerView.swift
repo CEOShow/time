@@ -10,21 +10,25 @@ import SwiftUI
 struct TimerView: View {
     let selectedItems: [String]
     let minutes: Int
-    @AppStorage("breakMinutes") private var breakMinutes = 5 // 預設休息時間
+    @AppStorage("breakMinutes") private var breakMinutes = 5
     @State private var remainingTime: Int
     @State private var timer: Timer?
-    @State private var currentItemIndex = 0
-    @State private var isBreakTime = false // 是否為休息時間
+    @State private var currentItemIndex: Int
+    @State private var isBreakTime = false
     @Environment(\.presentationMode) var presentationMode
     
     init(selectedItems: [String], minutes: Int) {
         self.selectedItems = selectedItems
         self.minutes = minutes
         self._remainingTime = State(initialValue: minutes * 60)
+        self._currentItemIndex = State(initialValue: selectedItems.isEmpty ? -1 : 0)
+        
+        // 印出接收到的項目，用於調試
+        print("TimerView初始化，收到\(selectedItems.count)個項目：\(selectedItems)")
     }
     
     var body: some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 8) {
             // 顯示當前狀態（專注或休息）
             Text(isBreakTime ? "休息時間" : "專注時間")
                 .font(.system(size: 24, weight: .bold))
@@ -35,27 +39,28 @@ struct TimerView: View {
                 .font(.system(size: 40, weight: .bold))
                 .padding(.bottom, 5)
             
-            // 專注時間時顯示項目列表，休息時間則顯示提示訊息
+            // 專注時間時顯示當前項目，休息時間則顯示提示訊息
             if !isBreakTime {
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(Array(selectedItems.enumerated()), id: \.offset) { index, item in
-                        HStack(spacing: 5) {
-                            Text("\(index + 1).")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(index == currentItemIndex ? .blue : .gray)
-                            Text(item)
-                                .font(.system(size: 16))
-                                .foregroundColor(index == currentItemIndex ? .blue : .primary)
-                            if index == currentItemIndex {
-                                Image(systemName: "arrow.forward")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.blue)
-                            }
+                if !selectedItems.isEmpty && currentItemIndex >= 0 && currentItemIndex < selectedItems.count {
+                    Group {
+                        if selectedItems.count > 1 {
+                            Text("\(currentItemIndex + 1). \(selectedItems[currentItemIndex])")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.blue)
+                        } else {
+                            Text(selectedItems[currentItemIndex])
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundColor(.blue)
                         }
                     }
+                    .padding(.horizontal)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                } else {
+                    Text("沒有可專注的項目")
+                        .font(.system(size: 18))
+                        .foregroundColor(.gray)
+                        .padding()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
             } else {
                 Text("休息一下 放鬆心情～")
                     .font(.system(size: 18))
@@ -80,7 +85,10 @@ struct TimerView: View {
             .padding(.bottom, 20)
         }
         .onAppear {
-            startTimer()
+            print("TimerView出現，項目數量：\(selectedItems.count)")
+            if !selectedItems.isEmpty {
+                startTimer()
+            }
         }
     }
     
@@ -91,9 +99,9 @@ struct TimerView: View {
                 remainingTime -= 1
             } else {
                 if isBreakTime {
-                    nextItem() // 休息結束，進入下一個項目
+                    nextItem()
                 } else {
-                    startBreak() // 專注結束，開始休息
+                    startBreak()
                 }
             }
         }
@@ -108,10 +116,12 @@ struct TimerView: View {
     // 進入下一個專注項目
     private func nextItem() {
         isBreakTime = false
-        if currentItemIndex < selectedItems.count - 1 {
+        if !selectedItems.isEmpty && currentItemIndex < selectedItems.count - 1 {
             currentItemIndex += 1
             remainingTime = minutes * 60
+            print("進入下一項目：\(selectedItems[currentItemIndex])")
         } else {
+            print("所有項目已完成")
             stopTimer()
             presentationMode.wrappedValue.dismiss()
         }

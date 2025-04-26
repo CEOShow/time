@@ -8,8 +8,6 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(\.dismiss) var dismiss
-    
     var body: some View {
         NavigationStack {
             List {
@@ -30,13 +28,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("設定")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("完成") {
-                        dismiss()
-                    }
-                }
-            }
+            // 已移除 toolbar 中的「完成」按鈕
         }
     }
 }
