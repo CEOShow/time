@@ -55,12 +55,16 @@ struct ContentView: View {
     @State private var numberOfFocusItems: Int
     @State private var showingFocusItems = false
     @State private var showingTimer = false
-    @State private var selectedItems: [String] = []
+    @State private var selectedItems: [String] = [] // 改為空陣列，不預設選擇
     @State private var showingSettings = false
     @State private var focusItems: [FocusItem] = []
+    @State private var availableTimerItems: [TimerItem] = []
+    @State private var isInitialized = false
     
     // 用於調試
     @State private var errorMessage: String = ""
+    
+    private let timerManager = TimerManager.shared
 
     init() {
         let savedMinutes = UserDefaults.standard.integer(forKey: "defaultMinutes")
@@ -70,24 +74,22 @@ struct ContentView: View {
     }
 
     private func loadFocusItems() {
-        if let savedItems = try? JSONDecoder().decode([FocusItem].self, from: focusItemsData) {
-            focusItems = savedItems
-        } else {
-            focusItems = [
-                FocusItem(name: "讀書"),
-                FocusItem(name: "做家事"),
-                FocusItem(name: "玩電動"),
-                FocusItem(name: "唸英文"),
-                FocusItem(name: "寫程式"),
-                FocusItem(name: "畫畫"),
-                FocusItem(name: "運動"),
-                FocusItem(name: "冥想"),
-                FocusItem(name: "寫作")
-            ]
-            if let encoded = try? JSONEncoder().encode(focusItems) {
-                focusItemsData = encoded
-            }
+        // 從資料庫載入項目
+        availableTimerItems = timerManager.getAllItems()
+        
+        // 標記為已初始化，但不自動選擇項目
+        isInitialized = true
+        
+        print("載入項目完成，可用項目數：\(availableTimerItems.count)，已選項目：\(selectedItems)")
+    }
+    
+    private func ensureSelectedItems() {
+        // 移除自動選擇邏輯，只保留數量限制邏輯
+        if selectedItems.count > numberOfFocusItems {
+            selectedItems = Array(selectedItems.prefix(numberOfFocusItems))
         }
+        
+        print("ensureSelectedItems 完成，當前選中項目：\(selectedItems)")
     }
 
     var body: some View {
@@ -154,6 +156,10 @@ struct ContentView: View {
                     Button(action: {
                         if numberOfFocusItems > 1 {
                             numberOfFocusItems -= 1
+                            // 確保初始化完成後才執行
+                            if isInitialized {
+                                ensureSelectedItems()
+                            }
                         }
                     }) {
                         Image(systemName: "minus")
@@ -165,6 +171,7 @@ struct ContentView: View {
                     Button(action: {
                         if numberOfFocusItems < 9 {
                             numberOfFocusItems += 1
+                            // 不再自動填充選擇項目
                         }
                     }) {
                         Image(systemName: "plus")
@@ -173,8 +180,10 @@ struct ContentView: View {
                 }
             }
             .padding(.vertical, 3)
+            
 
-            // 顯示錯誤訊息 (調試用)
+
+            // 顯示錯誤訊息
             if !errorMessage.isEmpty {
                 Text(errorMessage)
                     .font(.caption)
@@ -186,12 +195,28 @@ struct ContentView: View {
 
             HStack(spacing: 8) {
                 Button(action: {
-                    if selectedItems.isEmpty {
-                        errorMessage = "請選擇至少一個專注項目"
-                    } else {
-                        errorMessage = ""
-                        showingTimer = true
+                    // 確保已初始化
+                    if !isInitialized {
+                        loadFocusItems()
                     }
+                    
+                    // 檢查是否已選擇專注項目
+                    if selectedItems.isEmpty {
+                        errorMessage = "請先選擇專注項目"
+                        showingFocusItems = true // 直接開啟選擇畫面
+                        return
+                    }
+                    
+                    // 檢查選擇數量是否符合設定
+                    if selectedItems.count != numberOfFocusItems {
+                        errorMessage = "請選擇 \(numberOfFocusItems) 個專注項目"
+                        showingFocusItems = true
+                        return
+                    }
+                    
+                    errorMessage = ""
+                    print("開始計時，選中項目：\(selectedItems)")
+                    showingTimer = true
                 }) {
                     Text("開始")
                         .frame(maxWidth: .infinity)
@@ -200,6 +225,7 @@ struct ContentView: View {
                 .frame(minHeight: 40)
 
                 Button(action: {
+                    errorMessage = "" // 清除錯誤訊息
                     showingFocusItems = true
                 }) {
                     Text("項目")
@@ -228,12 +254,24 @@ struct ContentView: View {
             )
         }
         .onChange(of: numberOfFocusItems) { newValue in
-            if selectedItems.count > newValue {
-                selectedItems = Array(selectedItems.prefix(newValue))
+            // 只有在初始化完成後才執行
+            if isInitialized {
+                ensureSelectedItems()
+                print("專注項目數量改變為 \(newValue)，當前選中項目：\(selectedItems)")
+            }
+        }
+        .onChange(of: selectedItems) { newValue in
+            // 當選擇項目改變時，清除錯誤訊息
+            if !newValue.isEmpty {
+                errorMessage = ""
             }
         }
         .onAppear {
-            loadFocusItems()
+            // 只在第一次出現時載入
+            if !isInitialized {
+                loadFocusItems()
+            }
+            print("ContentView onAppear - 選中項目: \(selectedItems), 初始化狀態: \(isInitialized)")
         }
     }
 }
