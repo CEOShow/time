@@ -12,6 +12,10 @@ struct timeApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    // 應用程式啟動時請求通知權限
+                    NotificationManager.shared.requestNotificationPermission()
+                }
         }
     }
 }
