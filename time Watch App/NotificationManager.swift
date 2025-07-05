@@ -8,10 +8,13 @@
 import UserNotifications
 import Foundation
 
-class NotificationManager: ObservableObject {
+class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationManager()
     
-    private init() {}
+    override init() {
+        super.init()
+        UNUserNotificationCenter.current().delegate = self
+    }
     
     // 請求通知權限
     func requestNotificationPermission() {
@@ -32,8 +35,12 @@ class NotificationManager: ObservableObject {
     func scheduleFocusEndNotification(after seconds: TimeInterval) {
         let content = UNMutableNotificationContent()
         content.title = "專注時間到囉！"
-        content.body = "先休息一下吧～"
+        content.body = "回到 App 開始計時休息吧！"
         content.sound = UNNotificationSound.default
+        content.userInfo = [
+            "notificationType": "focusEnd",
+            "scheduledTime": Date().timeIntervalSince1970
+        ]
         
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)
         let request = UNNotificationRequest(
@@ -57,6 +64,10 @@ class NotificationManager: ObservableObject {
         content.title = "休息時間到囉！"
         content.body = "趕快去做下一件事情吧～"
         content.sound = UNNotificationSound.default
+        content.userInfo = [
+            "notificationType": "breakEnd",
+            "scheduledTime": Date().timeIntervalSince1970
+        ]
         
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: false)
         let request = UNNotificationRequest(
@@ -84,5 +95,31 @@ class NotificationManager: ObservableObject {
     func cancelNotification(withIdentifier identifier: String) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
         print("已取消通知：\(identifier)")
+    }
+    
+    // MARK: - UNUserNotificationCenterDelegate
+    
+    // 當通知在前景時顯示
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.sound, .banner])
+    }
+    
+    // 當用戶點擊通知時觸發
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        
+        let userInfo = response.notification.request.content.userInfo
+        
+        if let notificationType = userInfo["notificationType"] as? String {
+            print("收到通知回調：\(notificationType)")
+            
+            // 發送通知給應用其他部分
+            NotificationCenter.default.post(
+                name: Notification.Name("TimerNotificationReceived"),
+                object: nil,
+                userInfo: ["type": notificationType]
+            )
+        }
+        
+        completionHandler()
     }
 }
