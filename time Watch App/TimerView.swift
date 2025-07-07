@@ -11,29 +11,23 @@ struct TimerView: View {
     let selectedItems: [String]
     let minutes: Int
     @AppStorage("breakMinutes") private var breakMinutes = 5
-    @State private var remainingTime: Int
+    
+    @State private var remainingTime: Int = 0
     @State private var timer: Timer?
-    @State private var currentItemIndex: Int
+    @State private var currentItemIndex: Int = 0
     @State private var isBreakTime = false
+    
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.scenePhase) private var scenePhase
     
-    // 通知管理器
+    // 使用狀態管理器
+    private let stateManager = TimerStateManager.shared
     private let notificationManager = NotificationManager.shared
-    
-    // 記錄開始時間，用於計算實際經過的時間
-    @State private var startTime: Date = Date()
-    @State private var phaseStartTime: Date = Date()
-    @State private var totalDuration: Int = 0
     
     init(selectedItems: [String], minutes: Int) {
         self.selectedItems = selectedItems
         self.minutes = minutes
-        self._remainingTime = State(initialValue: minutes * 60)
-        self._currentItemIndex = State(initialValue: selectedItems.isEmpty ? -1 : 0)
-        self._totalDuration = State(initialValue: minutes * 60)
         
-        // 印出接收到的項目，用於調試
         print("TimerView初始化，收到\(selectedItems.count)個項目：\(selectedItems)")
     }
     
@@ -90,9 +84,6 @@ struct TimerView: View {
             // 停止按鈕
             Button(action: {
                 stopTimer()
-                // 取消所有通知
-                notificationManager.cancelAllNotifications()
-                presentationMode.wrappedValue.dismiss()
             }) {
                 Text("停止")
                     .font(.system(size: 18, weight: .semibold))
@@ -104,125 +95,158 @@ struct TimerView: View {
             .padding(.bottom, 20)
         }
         .onAppear {
-            print("TimerView出現，項目數量：\(selectedItems.count)")
-            if !selectedItems.isEmpty {
-                startTimer()
-                // 安排專注時間結束通知
-                notificationManager.scheduleFocusEndNotification(after: TimeInterval(remainingTime))
-            }
+            initializeTimer()
         }
         .onDisappear {
-            // 當 View 消失時取消所有通知
-            notificationManager.cancelAllNotifications()
+            stopTimerOnly()
         }
         .onChange(of: scenePhase) { newPhase in
             handleScenePhaseChange(newPhase)
         }
     }
     
-    // 處理場景狀態變化（前景/背景切換）
+    // 初始化計時器
+    private func initializeTimer() {
+        if stateManager.isTimerRunning {
+            // 如果已經有計時會話在進行，恢復狀態
+            print("恢復計時會話")
+            restoreTimerState()
+        } else {
+            // 開始新的計時會話
+            print("開始新的計時會話")
+            stateManager.startTimerSession(
+                selectedItems: selectedItems,
+                focusMinutes: minutes,
+                breakMinutes: breakMinutes
+            )
+            updateLocalState()
+            scheduleNotification()
+        }
+        
+        startTimer()
+    }
+    
+    // 恢復計時器狀態
+    private func restoreTimerState() {
+        // 檢查階段是否已完成
+        let phaseStatus = stateManager.checkPhaseCompletion()
+        
+        switch phaseStatus {
+        case .continuing:
+            // 階段還在繼續
+            updateLocalState()
+            scheduleNotification()
+            
+        case .breakStarted:
+            // 應該開始休息了
+            updateLocalState()
+            scheduleNotification()
+            print("檢測到應該開始休息")
+            
+        case .focusStarted:
+            // 應該開始下一個專注項目了
+            updateLocalState()
+            scheduleNotification()
+            print("檢測到應該開始下一個專注項目")
+            
+        case .allCompleted:
+            // 所有項目已完成
+            print("所有項目已完成")
+            presentationMode.wrappedValue.dismiss()
+            return
+        }
+    }
+    
+    // 更新本地狀態
+    private func updateLocalState() {
+        isBreakTime = stateManager.isBreakTime
+        currentItemIndex = stateManager.currentItemIndex
+        remainingTime = stateManager.getCurrentRemainingTime()
+        
+        print("更新本地狀態：\(isBreakTime ? "休息" : "專注")，項目 \(currentItemIndex)，剩餘 \(remainingTime) 秒")
+    }
+    
+    // 安排通知
+    private func scheduleNotification() {
+        notificationManager.cancelAllNotifications()
+        
+        if remainingTime > 0 {
+            if isBreakTime {
+                notificationManager.scheduleBreakEndNotification(after: TimeInterval(remainingTime))
+            } else {
+                notificationManager.scheduleFocusEndNotification(after: TimeInterval(remainingTime))
+            }
+        }
+    }
+    
+    // 處理場景狀態變化
     private func handleScenePhaseChange(_ newPhase: ScenePhase) {
         switch newPhase {
         case .active:
-            // App 回到前景，重新計算剩餘時間
-            updateTimeFromBackground()
-            if timer == nil {
-                startTimer()
-            }
             print("App 回到前景")
+            if stateManager.isTimerRunning {
+                restoreTimerState()
+                if timer == nil {
+                    startTimer()
+                }
+            }
             
         case .inactive, .background:
-            // App 進入背景，停止計時器但保留通知
-            stopTimerOnly()
             print("App 進入背景")
+            stopTimerOnly()
             
         @unknown default:
             break
         }
     }
     
-    // 從背景回來時更新時間
-    private func updateTimeFromBackground() {
-        let now = Date()
-        let elapsed = Int(now.timeIntervalSince(phaseStartTime))
-        
-        if elapsed > 0 {
-            remainingTime = max(0, remainingTime - elapsed)
-            
-            // 檢查是否時間已到
-            if remainingTime <= 0 {
-                if isBreakTime {
-                    nextItem()
-                } else {
-                    startBreak()
-                }
-            }
-        }
-        
-        // 更新階段開始時間
-        phaseStartTime = now
-    }
-    
     // 開始計時器
     private func startTimer() {
-        phaseStartTime = Date()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             if remainingTime > 0 {
                 remainingTime -= 1
             } else {
-                if isBreakTime {
-                    nextItem()
-                } else {
-                    startBreak()
-                }
+                handlePhaseCompletion()
             }
         }
     }
     
-    // 只停止計時器，不取消通知
+    // 處理階段完成
+    private func handlePhaseCompletion() {
+        let phaseStatus = stateManager.checkPhaseCompletion()
+        
+        switch phaseStatus {
+        case .continuing:
+            break
+            
+        case .breakStarted:
+            updateLocalState()
+            scheduleNotification()
+            print("開始休息時間")
+            
+        case .focusStarted:
+            updateLocalState()
+            scheduleNotification()
+            print("開始下一個專注項目")
+            
+        case .allCompleted:
+            print("所有項目已完成")
+            stopTimer()
+        }
+    }
+    
+    // 只停止計時器
     private func stopTimerOnly() {
         timer?.invalidate()
         timer = nil
     }
     
-    // 開始休息時間
-    private func startBreak() {
-        isBreakTime = true
-        remainingTime = breakMinutes * 60
-        phaseStartTime = Date()
-        
-        // 取消之前的通知並安排休息結束通知
-        notificationManager.cancelAllNotifications()
-        notificationManager.scheduleBreakEndNotification(after: TimeInterval(remainingTime))
-        
-        print("開始休息時間，\(breakMinutes)分鐘")
-    }
-    
-    // 進入下一個專注項目
-    private func nextItem() {
-        isBreakTime = false
-        if !selectedItems.isEmpty && currentItemIndex < selectedItems.count - 1 {
-            currentItemIndex += 1
-            remainingTime = minutes * 60
-            phaseStartTime = Date()
-            
-            // 取消之前的通知並安排新的專注結束通知
-            notificationManager.cancelAllNotifications()
-            notificationManager.scheduleFocusEndNotification(after: TimeInterval(remainingTime))
-            
-            print("進入下一項目：\(selectedItems[currentItemIndex])")
-        } else {
-            print("所有項目已完成")
-            stopTimer()
-            notificationManager.cancelAllNotifications()
-            presentationMode.wrappedValue.dismiss()
-        }
-    }
-    
-    // 停止計時器
+    // 停止計時器並退出
     private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
+        stopTimerOnly()
+        stateManager.stopTimer()
+        notificationManager.cancelAllNotifications()
+        presentationMode.wrappedValue.dismiss()
     }
     
     // 格式化時間顯示
