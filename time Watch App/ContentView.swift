@@ -107,8 +107,10 @@ struct ContentView: View {
 
                 Spacer()
 
+                // 自適應文字大小的標題
                 Text("番茄鐘")
-                    .font(.system(size: 25, weight: .bold))
+                    .font(.system(size: titleFontSize, weight: .bold))
+                    .lineLimit(1)
 
                 Spacer()
 
@@ -272,6 +274,32 @@ struct ContentView: View {
                 loadFocusItems()
             }
             print("ContentView onAppear - 選中項目: \(selectedItems), 初始化狀態: \(isInitialized)")
+        }
+    }
+    
+    // 計算標題字體大小的computed property
+    private var titleFontSize: CGFloat {
+        // 根據螢幕寬度調整字體大小
+        let screenWidth = WKInterfaceDevice.current().screenBounds.width
+        
+        // 先打印實際寬度來調試
+        print("Apple Watch 螢幕寬度: \(screenWidth)")
+        
+        switch screenWidth {
+        case 187: // Apple Watch Series 1/2/3 42mm
+            return 18
+        case 162: // Apple Watch Series 4/5/6/SE/7/8/9 40mm
+            return 16
+        case 184: // Apple Watch Series 4/5/6/SE/7/8/9 44mm
+            return 20
+        case 205: // Apple Watch Ultra 49mm
+            return 22
+        case 208: // Apple Watch 46mm
+            return 20
+        default:
+            // 對於其他尺寸，使用比例計算
+            print("未知的螢幕寬度: \(screenWidth)")
+            return max(14, min(20, screenWidth * 0.11))
         }
     }
 }
