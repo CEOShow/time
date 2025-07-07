@@ -62,7 +62,7 @@ class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterD
     func scheduleBreakEndNotification(after seconds: TimeInterval) {
         let content = UNMutableNotificationContent()
         content.title = "休息時間到囉！"
-        content.body = "趕快去做下一件事情吧～"
+        content.body = "回到 App 報到吧！"
         content.sound = UNNotificationSound.default
         content.userInfo = [
             "notificationType": "breakEnd",
